@@ -1,39 +1,28 @@
 import streamlit as st
-import requests
-import io
-from PIL import Image
+from huggingface_hub import InferenceClient
+import os
 
-st.set_page_config(page_title="Anannan Studio Pro 2026", page_icon="⚡", layout="centered")
+st.set_page_config(page_title="Anannan Studio Pro 2026", layout="centered")
+st.markdown("<h2>⚡ Anannan Studio Pro 2026</h2>", unsafe_allow_html=True)
+st.caption("صناعة وتحويل التطبيقات الاحترافية - Taiseer22")
 
-st.title("⚡ Anannan Studio Pro 2026")
-st.markdown("**صناعة وحلول التطبيقات الاحترافية - Taiseer22**")
+prompt = st.text_area("اكتب وصف الصورة", value="luxury Arabic palace, cinematic lighting, ultra detailed, 8k")
 
-HF_TOKEN = st.secrets.get("HF_TOKEN", "")
-if not HF_TOKEN:
-    st.warning("⚠️ ضيف HF_TOKEN في Streamlit Secrets")
-    st.stop()
+if st.button("⚡ توليد بـ Anannan", type="primary", use_container_width=True):
+    try:
+        token = st.secrets.get("HF_TOKEN") or os.getenv("HF_TOKEN")
+        if not token:
+            st.error("ما لقيت التوكن! تأكد من Secrets")
+        else:
+            client = InferenceClient(token=token)
+            # موديل جديد شغال 2026
+            image = client.text_to_image(
+                prompt,
+                model="stabilityai/stable-diffusion-xl-base-1.0"
+            )
+            st.image(image, caption="Anannan Studio - Taiseer22")
+            st.success("تم التوليد! 🔥")
+    except Exception as e:
+        st.error(f"Error: {e}")
 
-headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-API_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0"
-
-prompt = st.text_area("اكتب وصف الصورة:", "luxury Arabic palace, cinematic lighting, ultra detailed, 8k", height=100)
-
-if st.button("توليد بـ Anannan ⚡", type="primary", use_container_width=True):
-    with st.spinner("Anannan يبدع... انتظر 30 ثانية"):
-        try:
-            r = requests.post(API_URL, headers=headers, json={"inputs": prompt}, timeout=120)
-            if r.status_code == 200:
-                img = Image.open(io.BytesIO(r.content))
-                st.image(img, caption="Anannan Pro 2026", use_container_width=True)
-                buf = io.BytesIO()
-                img.save(buf, format="PNG")
-                st.download_button("📥 تحميل", buf.getvalue(), "anannan.png", "image/png", use_container_width=True)
-            elif r.status_code == 503:
-                st.info("الموديل بيصحى... استنى دقيقة ودوس مرة ثانية")
-            else:
-                st.error(f"خطأ: {r.text[:200]}")
-        except Exception as e:
-            st.error(f"خطأ: {e}")
-
-st.divider()
 st.caption("© 2026 Taiseer22 | Anannan Studio")

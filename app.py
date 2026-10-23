@@ -2,42 +2,38 @@ import streamlit as st
 import requests
 import io
 from PIL import Image
-import os
 
-# --- إعدادات الواجهة ---
-st.set_page_config(page_title="استوديو الذكاء الاصطناعي 2026", layout="wide")
-st.title("🎨 AI-Creative-Studio-2026")
+st.set_page_config(page_title="Anannan Studio Pro 2026", page_icon="⚡", layout="centered")
 
-# --- الحصول على المفتاح من إعدادات النظام ---
-# ملاحظة: إذا كنت تجرب على جهازك الشخصي، استبدل os.getenv بـ "توكن_الخاص_بك"
-HF_TOKEN = os.getenv("HF_TOKEN") 
+st.title("⚡ Anannan Studio Pro 2026")
+st.markdown("**صناعة وحلول التطبيقات الاحترافية - Taiseer22**")
 
-# رابط المحرك (سأختار لك أقوى موديل صور حالياً)
-API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
+HF_TOKEN = st.secrets.get("HF_TOKEN", "")
+if not HF_TOKEN:
+    st.warning("⚠️ ضيف HF_TOKEN في Streamlit Secrets")
+    st.stop()
+
 headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+API_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0"
 
-def query(payload):
-    response = requests.post(API_URL, headers=headers, json=payload)
-    if response.status_code != 200:
-        st.error(f"خطأ في الاتصال بالسحابة: {response.text}")
-        return None
-    return response.content
+prompt = st.text_area("اكتب وصف الصورة:", "luxury Arabic palace, cinematic lighting, ultra detailed, 8k", height=100)
 
-# --- واجهة المستخدم ---
-with st.sidebar:
-    st.header("إعدادات التصميم")
-    style = st.selectbox("نمط الصورة", ["سينمائي", "واقعي", "رسم رقمي", "أنمي"])
+if st.button("توليد بـ Anannan ⚡", type="primary", use_container_width=True):
+    with st.spinner("Anannan يبدع... انتظر 30 ثانية"):
+        try:
+            r = requests.post(API_URL, headers=headers, json={"inputs": prompt}, timeout=120)
+            if r.status_code == 200:
+                img = Image.open(io.BytesIO(r.content))
+                st.image(img, caption="Anannan Pro 2026", use_container_width=True)
+                buf = io.BytesIO()
+                img.save(buf, format="PNG")
+                st.download_button("📥 تحميل", buf.getvalue(), "anannan.png", "image/png", use_container_width=True)
+            elif r.status_code == 503:
+                st.info("الموديل بيصحى... استنى دقيقة ودوس مرة ثانية")
+            else:
+                st.error(f"خطأ: {r.text[:200]}")
+        except Exception as e:
+            st.error(f"خطأ: {e}")
 
-prompt = st.text_area("أدخل وصف الصورة بالتفصيل (بالإنجليزي):", 
-                     "A futuristic luxury car driving through a neon city at night, 8k, hyper-realistic.")
-
-if st.button("توليد الصورة فوراً ✨"):
-    if not HF_TOKEN:
-        st.warning("تحذير: لم يتم العثور على مفتاح HF_TOKEN. تأكد من إضافته في Secrets.")
-    else:
-        with st.spinner("جاري التواصل مع الخوادم السحابية..."):
-            image_bytes = query({"inputs": prompt})
-            if image_bytes:
-                image = Image.open(io.BytesIO(image_bytes))
-                st.image(image, caption="تم التوليد بواسطة استوديو 2026", use_column_width=True)
-                st.success("تم التوليد بنجاح في ثوانٍ!")
+st.divider()
+st.caption("© 2026 Taiseer22 | Anannan Studio")

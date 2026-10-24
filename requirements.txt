@@ -1,3 +1,4 @@
 streamlit
-requests
+huggingface_hub
 Pillow
+requests

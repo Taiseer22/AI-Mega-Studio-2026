@@ -4,179 +4,163 @@ from PIL import Image, ImageOps, ImageEnhance, ImageFilter, ImageDraw
 from io import BytesIO
 import urllib.parse, random
 
-st.set_page_config(page_title="Anannan Studio V5 - Tourism", page_icon="🏜️", layout="wide")
-st.markdown("<style>.stApp{background:#0e0e10; color:#eee} .stButton>button{background:linear-gradient(90deg,#ff8a00,#e52e71); color:white; border-radius:12px; height:50px; font-weight:bold;}</style>", unsafe_allow_html=True)
+st.set_page_config(page_title="Anannan Studio", page_icon="✨", layout="wide")
+st.markdown("<style>.stApp{background:#0a0a0a;color:#eee} .stButton>button{background:#fff;color:#000;border-radius:10px;height:48px;font-weight:bold} .stButton>button:hover{background:#eee}</style>", unsafe_allow_html=True)
 
 if 'gallery' not in st.session_state: st.session_state.gallery=[]
-if 'chat' not in st.session_state: st.session_state.chat=[]
 
-st.title("🏜️ Anannan Studio V5 - للسياحة والفنادق")
-st.caption("توليد + تعديل صور حية + إصلاح + توسيع + استنساخ - صنع في البتراء 🇯🇴")
+st.title("Anannan Studio")
+st.caption("Image Generator & Editor")
 
-tab1, tab2, tab3, tab4 = st.tabs(["🎨 توليد", "🛠️ تعديل الصور الحية", "💬 دردشة", "🖼️ المعرض"])
+tab1, tab2, tab3 = st.tabs(["Generate", "Edit", "Gallery"])
 
 with tab1:
-    # نفس توليد V4
-    prompt = st.text_area("وصف الصورة", "luxury hotel in Petra, cinematic")
-    w,h = 1024,1024
-    if st.button("⚡ توليد", use_container_width=True):
-        url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt + ', ultra-detailed, 8k')}?width={w}&height={h}&model=flux&seed={random.randint(1,9999999)}&nologo=true&enhance=true"
+    prompt = st.text_area("Prompt", "a beautiful photo, ultra-detailed, 8k", height=80, label_visibility="collapsed", placeholder="Describe anything...")
+    if st.button("Generate", use_container_width=True):
+        url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt)}?width=1024&height=1024&model=flux&seed={random.randint(1,9999999)}&nologo=true&enhance=true"
         r = requests.get(url, timeout=90)
         if r.status_code==200:
-            img = Image.open(BytesIO(r.content)).convert("RGB").crop((0,0,w,h-35)).resize((w,h), Image.LANCZOS)
+            img = Image.open(BytesIO(r.content)).convert("RGB")
             st.image(img, use_container_width=True)
             st.session_state.gallery.append(img)
 
 with tab2:
-    st.markdown("### 🛠️ استوديو تعديل الصور الحية - للفنادق والمطاعم")
-    st.info("ارفع صورة حقيقية من فندق / مطعم / سياح وعدلها باحتراف")
-    
-    uploaded = st.file_uploader("📤 ارفع صورة حية (JPG/PNG)", type=["jpg","jpeg","png"])
+    uploaded = st.file_uploader("Upload any image", type=["jpg","jpeg","png","webp"], label_visibility="collapsed")
     
     if uploaded:
-        original = Image.open(uploaded).convert("RGB")
-        st.image(original, caption="الصورة الأصلية", use_container_width=True)
+        orig = Image.open(uploaded).convert("RGB")
+        st.image(orig, use_container_width=True)
         
-        col_a, col_b, col_c = st.columns(3)
+        st.divider()
         
-        with col_a:
-            st.markdown("#### ✨ إصلاح وترميم")
-            if st.button("🔧 إصلاح تلقائي ULTRA"):
-                # إصلاح تلقائي
-                img = original.copy()
-                img = ImageEnhance.Sharpness(img).enhance(1.6)
+        tool = st.radio("Tools", ["Enhance", "Filters", "Resize", "Transform"], horizontal=True, label_visibility="collapsed")
+        
+        result = None
+        
+        if tool == "Enhance":
+            c1,c2,c3,c4 = st.columns(4)
+            sharp = c1.slider("Sharp", 0.0, 3.0, 1.0)
+            color = c2.slider("Color", 0.0, 3.0, 1.0)
+            bright = c3.slider("Light", 0.5, 2.0, 1.0)
+            contrast = c4.slider("Contrast", 0.5, 2.0, 1.0)
+            
+            if st.button("Apply", key="enh"):
+                img = orig.copy()
+                img = ImageEnhance.Sharpness(img).enhance(sharp)
+                img = ImageEnhance.Color(img).enhance(color)
+                img = ImageEnhance.Brightness(img).enhance(bright)
+                img = ImageEnhance.Contrast(img).enhance(contrast)
+                result = img
+            
+            col_fix = st.columns(2)
+            if col_fix[0].button("Auto Fix", use_container_width=True):
+                img = orig.copy()
+                img = ImageEnhance.Sharpness(img).enhance(1.5)
                 img = ImageEnhance.Contrast(img).enhance(1.2)
-                img = ImageEnhance.Color(img).enhance(1.25)
-                img = ImageEnhance.Brightness(img).enhance(1.05)
-                # إزالة تشويش خفيف
-                img = img.filter(ImageFilter.UnsharpMask(radius=1.5, percent=150, threshold=2))
-                st.image(img, caption="بعد الإصلاح", use_container_width=True)
-                buf=BytesIO(); img.save(buf, format="PNG")
-                st.download_button("📥 تحميل بعد الإصلاح", buf.getvalue(), "fixed.png", "image/png", key="fix")
-                st.session_state.gallery.append(img)
-                
-            if st.button("🎨 تلوين وتحسين الألوان"):
-                img = ImageEnhance.Color(original).enhance(1.6)
-                img = ImageEnhance.Contrast(img).enhance(1.15)
-                st.image(img, use_container_width=True)
-                buf=BytesIO(); img.save(buf, format="PNG")
-                st.download_button("📥 تحميل ملون", buf.getvalue(), "color.png", "image/png", key="color")
+                img = ImageEnhance.Color(img).enhance(1.2)
+                img = img.filter(ImageFilter.UnsharpMask(radius=1.2, percent=150, threshold=2))
+                result = img
+            if col_fix[1].button("Denoise", use_container_width=True):
+                result = orig.filter(ImageFilter.MedianFilter(3))
 
-        with col_b:
-            st.markdown("#### 🎭 تأثيرات احترافية")
-            effect = st.selectbox("اختر التأثير", ["بدون", "سينمائي - Cinematic", "فينتاج سياحي", "HDR للفنادق", "أبيض وأسود فاخر", "إضاءة ذهبية - Golden Hour", "Petra Rose Filter"])
+        elif tool == "Filters":
+            effect = st.selectbox("Filter", ["None","Cinematic","Vintage","HDR","B&W","Sepia","Vivid","Warm","Cold","Cartoon","Oil Paint","Blur","Golden"], label_visibility="collapsed")
+            intensity = st.slider("Strength", 0.0, 1.0, 0.5)
             
-            if st.button("✨ تطبيق التأثير"):
-                img = original.copy()
-                if effect == "سينمائي - Cinematic":
+            if st.button("Apply Filter", key="filt"):
+                img = orig.copy()
+                if effect == "Cinematic":
+                    overlay = Image.new("RGB", img.size, (20,10,40))
+                    img = Image.blend(img, overlay, intensity*0.3)
                     img = ImageEnhance.Contrast(img).enhance(1.3)
-                    img = ImageEnhance.Color(img).enhance(0.8)
-                    overlay = Image.new("RGB", img.size, (20, 10, 40))
-                    img = Image.blend(img, overlay, 0.15)
-                elif effect == "فينتاج سياحي":
-                    img = ImageEnhance.Color(img).enhance(0.7)
-                    img = img.filter(ImageFilter.GaussianBlur(0.5))
+                elif effect == "Vintage":
+                    img = ImageEnhance.Color(img).enhance(0.6)
                     overlay = Image.new("RGB", img.size, (200,180,120))
-                    img = Image.blend(img, overlay, 0.2)
-                elif effect == "HDR للفنادق":
-                    img = ImageEnhance.Contrast(img).enhance(1.4)
+                    img = Image.blend(img, overlay, intensity*0.4)
+                elif effect == "HDR":
+                    img = ImageEnhance.Contrast(img).enhance(1.5)
                     img = ImageEnhance.Sharpness(img).enhance(2.0)
-                    img = ImageEnhance.Color(img).enhance(1.3)
-                elif effect == "أبيض وأسود فاخر":
+                    img = ImageEnhance.Color(img).enhance(1.4)
+                elif effect == "B&W":
                     img = ImageOps.grayscale(img).convert("RGB")
-                    img = ImageEnhance.Contrast(img).enhance(1.2)
-                elif effect == "إضاءة ذهبية - Golden Hour":
+                elif effect == "Sepia":
+                    img = ImageOps.grayscale(img).convert("RGB")
+                    overlay = Image.new("RGB", img.size, (150,100,50))
+                    img = Image.blend(img, overlay, 0.6)
+                elif effect == "Vivid":
+                    img = ImageEnhance.Color(img).enhance(2.2)
+                elif effect == "Warm":
                     overlay = Image.new("RGB", img.size, (255,180,50))
-                    img = Image.blend(img, overlay, 0.18)
+                    img = Image.blend(img, overlay, intensity*0.3)
+                elif effect == "Cold":
+                    overlay = Image.new("RGB", img.size, (50,100,255))
+                    img = Image.blend(img, overlay, intensity*0.2)
+                elif effect == "Cartoon":
+                    img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
+                    img = ImageEnhance.Color(img).enhance(1.8)
+                elif effect == "Oil Paint":
+                    img = img.filter(ImageFilter.GaussianBlur(1))
+                    img = ImageEnhance.Color(img).enhance(1.5)
+                elif effect == "Blur":
+                    img = img.filter(ImageFilter.GaussianBlur(intensity*5))
+                elif effect == "Golden":
+                    overlay = Image.new("RGB", img.size, (255,180,50))
+                    img = Image.blend(img, overlay, intensity*0.25)
                     img = ImageEnhance.Brightness(img).enhance(1.1)
-                elif effect == "Petra Rose Filter":
-                    overlay = Image.new("RGB", img.size, (180, 60, 60))
-                    img = Image.blend(img, overlay, 0.12)
-                    img = ImageEnhance.Color(img).enhance(1.2)
-                
-                st.image(img, caption=f"تأثير: {effect}", use_container_width=True)
-                buf=BytesIO(); img.save(buf, format="PNG")
-                st.download_button(f"📥 تحميل {effect}", buf.getvalue(), f"{effect}.png", "image/png", key="eff")
-                st.session_state.gallery.append(img)
+                result = img
 
-        with col_c:
-            st.markdown("#### ↔️ توسيع واستنساخ")
+        elif tool == "Resize":
+            c1,c2 = st.columns(2)
+            new_w = c1.number_input("W", 100, 4000, orig.width)
+            new_h = c2.number_input("H", 100, 4000, orig.height)
+            method = st.selectbox("Method", ["Stretch","Smart Fill","White Frame","Mosaic"])
             
-            expand = st.selectbox("توسيع الصورة", ["بدون", "توسيع 16:9 للبنر", "توسيع 9:16 ستوري", "توسيع بانوراما 2x", "إضافة إطار أبيض احترافي"])
-            if st.button("↔️ توسيع"):
-                img = original.copy()
-                ow, oh = img.size
-                if "16:9" in expand:
-                    # توسيع للعرض
-                    new_w = int(oh * 16/9)
-                    if new_w > ow:
-                        # إنشاء خلفية موسعة بتمويه الحواف
-                        bg = img.resize((new_w, oh)).filter(ImageFilter.GaussianBlur(25))
-                        bg.paste(img, ((new_w-ow)//2, 0))
-                        img = bg
-                elif "9:16" in expand:
-                    new_h = int(ow * 16/9)
-                    bg = img.resize((ow, new_h)).filter(ImageFilter.GaussianBlur(25))
-                    bg.paste(img, (0, (new_h-oh)//2))
-                    img = bg
-                elif "بانوراما" in expand:
-                    bg = Image.new("RGB", (ow*2, oh), (0,0,0))
-                    bg.paste(img, (0,0))
-                    mirrored = ImageOps.mirror(img).filter(ImageFilter.GaussianBlur(15))
-                    bg.paste(mirrored, (ow,0))
-                    img = bg
-                elif "إطار" in expand:
-                    img = ImageOps.expand(img, border=40, fill="white")
-                    draw = ImageDraw.Draw(img)
-                    draw.rectangle([(0,0),(img.width-1, img.height-1)], outline="black", width=2)
-                
-                st.image(img, caption=expand, use_container_width=True)
-                buf=BytesIO(); img.save(buf, format="PNG")
-                st.download_button("📥 تحميل موسعة", buf.getvalue(), "expanded.png", "image/png", key="exp")
-                st.session_state.gallery.append(img)
+            if st.button("Resize", key="res"):
+                if method == "Stretch":
+                    result = orig.resize((new_w, new_h), Image.LANCZOS)
+                elif method == "Smart Fill":
+                    bg = orig.resize((new_w, new_h)).filter(ImageFilter.GaussianBlur(25))
+                    x = (new_w - orig.width)//2
+                    y = (new_h - orig.height)//2
+                    if x>=0 and y>=0: bg.paste(orig, (x,y))
+                    result = bg
+                elif method == "White Frame":
+                    result = ImageOps.expand(orig, border=40, fill="white")
+                    result = result.resize((new_w, new_h), Image.LANCZOS)
+                else:
+                    result = ImageOps.fit(orig, (new_w, new_h), method=Image.LANCZOS)
 
-            st.markdown("---")
-            clone_style = st.selectbox("استنساخ الاستايل", ["", "حولها لصورة فاخرة للفندق", "حولها لكرتون سياحي", "حولها ليلية بإضاءة رومانسية", "Petra Luxury Style"])
-            if st.button("🧬 استنساخ وتحويل"):
-                if clone_style:
-                    # استنساخ عن طريق AI - نولد صورة مشابهة
-                    prompt_map = {
-                        "حولها لصورة فاخرة للفندق": "luxury hotel photo, professional photography, 8k, same composition, ultra-detailed",
-                        "حولها لكرتون سياحي": "cartoon style, tourist poster, vibrant, same composition",
-                        "حولها ليلية بإضاءة رومانسية": "night version, romantic lighting, warm lights, same place, 8k",
-                        "Petra Luxury Style": "Petra Jordan luxury tourism style, rose red rocks, dramatic lighting, 8k"
-                    }
-                    p = prompt_map.get(clone_style, clone_style)
-                    url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(p)}?width=1024&height=1024&model=flux&seed={random.randint(1,9999999)}&nologo=true"
-                    r = requests.get(url, timeout=90)
-                    if r.status_code==200:
-                        new_img = Image.open(BytesIO(r.content)).convert("RGB")
-                        st.image(new_img, caption=f"مستنسخة: {clone_style}", use_container_width=True)
-                        buf=BytesIO(); new_img.save(buf, format="PNG")
-                        st.download_button("📥 تحميل مستنسخة", buf.getvalue(), "cloned.png", "image/png", key="clone")
-                        st.session_state.gallery.append(new_img)
+        else: # Transform
+            rot = st.slider("Rotate", -180, 180, 0)
+            flip = st.selectbox("Flip", ["None","Horizontal","Vertical"])
+            txt = st.text_input("Text (optional)", placeholder="Add text...")
+            
+            if st.button("Apply Transform", key="trans"):
+                img = orig.rotate(rot, expand=True)
+                if flip=="Horizontal": img = ImageOps.mirror(img)
+                if flip=="Vertical": img = ImageOps.flip(img)
+                if txt:
+                    draw = ImageDraw.Draw(img)
+                    draw.rectangle([(10, img.height-60),(img.width-10, img.height-10)], fill=(0,0,0))
+                    draw.text((20, img.height-50), txt, fill=(255,255,255))
+                result = img
+
+        if result is not None:
+            st.divider()
+            st.image(result, use_container_width=True)
+            buf = BytesIO(); result.save(buf, format="PNG")
+            col1,col2 = st.columns(2)
+            col1.download_button("Download", buf.getvalue(), f"edit_{random.randint(1,9999)}.png", "image/png", use_container_width=True)
+            if col2.button("Add to Gallery", use_container_width=True):
+                st.session_state.gallery.append(result)
 
 with tab3:
-    st.markdown("### 💬 دردشة سياحية")
-    for m in st.session_state.chat:
-        with st.chat_message(m["role"]): st.write(m["content"])
-    if q := st.chat_input("اسأل عن أفكار سياحية..."):
-        st.session_state.chat.append({"role":"user","content":q})
-        with st.chat_message("user"): st.write(q)
-        with st.chat_message("assistant"):
-            try:
-                r = requests.get(f"https://text.pollinations.ai/{urllib.parse.quote(q)}?model=openai&system=You are Anannan tourism expert from Petra, help with tourism marketing ideas in Arabic.", timeout=20)
-                ans = r.text
-            except:
-                ans = "أهلاً! أنا خبير سياحة البتراء، كيف أساعدك تسوق لفندقك؟"
-            st.write(ans)
-            st.session_state.chat.append({"role":"assistant","content":ans})
+    if st.session_state.gallery:
+        cols = st.columns(3)
+        for i, im in enumerate(reversed(st.session_state.gallery)):
+            with cols[i%3]:
+                st.image(im, use_container_width=True)
+    else:
+        st.caption("No images yet")
 
-with tab4:
-    st.markdown(f"### معرض - {len(st.session_state.gallery)} صورة")
-    cols = st.columns(3)
-    for i, im in enumerate(reversed(st.session_state.gallery)):
-        with cols[i%3]:
-            st.image(im, use_container_width=True)
-
-st.caption("© 2026 Taiseer22 | V5 Tourism Edition | البتراء 🇯🇴")
+st.caption("© Anannan Studio")

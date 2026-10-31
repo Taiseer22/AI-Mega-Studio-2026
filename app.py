@@ -4,12 +4,12 @@ from PIL import Image, ImageOps, ImageEnhance, ImageFilter, ImageDraw
 from io import BytesIO
 import urllib.parse, random
 
-st.set_page_config(page_title="Anannan Studio", page_icon="✨", layout="wide")
+st.set_page_config(page_title="ANA", page_icon="✨", layout="wide")
 st.markdown("<style>.stApp{background:#0a0a0a;color:#eee} .stButton>button{background:#fff;color:#000;border-radius:10px;height:48px;font-weight:bold} .stButton>button:hover{background:#eee}</style>", unsafe_allow_html=True)
 
 if 'gallery' not in st.session_state: st.session_state.gallery=[]
 
-st.title("Anannan Studio")
+st.title("ANA")
 st.caption("Image Generator & Editor")
 
 tab1, tab2, tab3 = st.tabs(["Generate", "Edit", "Gallery"])

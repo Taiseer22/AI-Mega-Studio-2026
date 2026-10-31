@@ -163,4 +163,4 @@ with tab3:
     else:
         st.caption("No images yet")
 
-st.caption("© Anannan Studio")
+st.caption("© ANA")
